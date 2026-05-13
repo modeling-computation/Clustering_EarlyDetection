@@ -115,7 +115,7 @@ def optimize_window_size(_data, epi, hockey_dates, eval_seasons, peak_start):
     return best_window, best_score
 
 st.set_page_config(
-    page_title="EpiWARN : Epidemic Warning simulAtion for Real-time transmission dyNamics ",
+    page_title="EpiWARN",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -236,8 +236,20 @@ with st.sidebar:
     st.markdown("---")
     run_btn = st.button("Run Analysis", type="primary")
 
-st.title("EpiWARN")
-st.header(": Epidemic Warning simulAtion for Real-time transmission dyNamics")
+st.markdown("""
+<div style="margin: 6px 0 18px 0; line-height: 1.08;">
+    <div style="font-size: 52px; font-weight: 900; color: #2c3e50; letter-spacing: 0;">
+        <span style="color: #1f77b4; font-weight: 900;">Epi</span><span style="color: #ff7f0e; font-weight: 900;">WA</span><span style="color: #b91c1c; font-weight: 900;">RN</span>
+    </div>
+    <div style="font-size: 34px; font-weight: 500; color: #2c3e50; letter-spacing: 0; margin-top: 6px;">
+        : <span style="font-weight: 900;">Epi</span>demic
+        <span style="font-size: 1.12em; font-weight: 900;">W</span>arning
+        simul<span style="font-size: 1.12em; font-weight: 900;">A</span>tion
+        for <span style="font-size: 1.12em; font-weight: 900;">R</span>eal-time
+        transmission dy<span style="font-size: 1.12em; font-weight: 900;">N</span>amics
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("""
 <div style="padding: 18px 22px; margin-bottom: 12px; font-size: 18px; line-height: 1.5; color: #000000; background-color: #f0f2f6; border-radius: 10px; border-top: 1px solid #d9d9d9;">
@@ -740,7 +752,7 @@ with tab2:
                     </div>
                     <div style="margin-left: 18px; margin-bottom: 26px;">
                         - The full retrospective period is used to learn a stable baseline pattern<br>
-                        - <strong>At least 1 year</strong> of data is required; <strong>4 years</strong> or more uses the standard season algorithm<br>
+                        - <strong>At least 1 year</strong> of data is required, <strong>4 years</strong> or more uses the standard season algorithm<br>
                     </div>
                     <div style="font-size: 28px; font-weight: 800; margin-bottom: 5px;">
                         How to set it up
