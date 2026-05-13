@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 from pathlib import Path
+import plotly.graph_objects as go
 
 # Import the modules used across preprocessing, modeling, and visualization.
 try:
@@ -52,6 +53,74 @@ def drop_warmup_detection_columns(date_df, warmup_seasons):
             continue
 
     return date_df.drop(columns=drop_cols, errors='ignore')
+
+def build_season_warning_plot(data, season, epi, summary):
+    season_data = data[data['Season'] == int(season)].copy()
+    season_data = season_data.sort_values('Date').reset_index(drop=True)
+
+    fig = go.Figure()
+    if season_data.empty:
+        fig.update_layout(
+            height=240,
+            margin=dict(l=40, r=30, t=20, b=45),
+            plot_bgcolor='white',
+        )
+        return fig
+
+    max_y = season_data[epi].max()
+    fig.add_trace(
+        go.Bar(
+            x=season_data['Date'],
+            y=season_data[epi],
+            name=epi,
+            marker_color='gray',
+            opacity=0.45,
+        )
+    )
+
+    for key, label, color in [
+        ('blue_date', 'Attention', '#1f77b4'),
+        ('orange_date', 'Alert', '#ff7f0e'),
+        ('red_date', 'Severe', '#d62728'),
+    ]:
+        date_val = pd.to_datetime(summary.get(key), errors='coerce')
+        if pd.isna(date_val):
+            continue
+        fig.add_vline(
+            x=date_val,
+            line_dash='dash',
+            line_color=color,
+            opacity=0.75,
+            line_width=5,
+        )
+        fig.add_annotation(
+            x=date_val + pd.Timedelta(days=2),
+            y=max_y * 1.08,
+            text=label,
+            showarrow=False,
+            font=dict(size=12, color=color),
+            textangle=-90,
+        )
+
+    fig.update_layout(
+        height=280,
+        margin=dict(l=40, r=30, t=20, b=45),
+        plot_bgcolor='white',
+        showlegend=False,
+        hovermode='x unified',
+        xaxis=dict(
+            title='Date',
+            range=[season_data['Date'].min(), season_data['Date'].max()],
+            type='date',
+        ),
+        yaxis=dict(
+            title=epi,
+            range=[0, max_y * 1.18 if pd.notna(max_y) and max_y > 0 else 1],
+            showgrid=True,
+            gridcolor='rgba(0,0,0,0.12)',
+        ),
+    )
+    return fig
 
 # Choose the sliding-window size that best aligns clustering alerts with hockey-stick breakpoints.
 @st.cache_resource(show_spinner=False)
@@ -408,33 +477,19 @@ with tab1:
             warmup_seasons = period_meta.get('warmup_seasons', [])
             date_df_display = drop_warmup_detection_columns(date_df, warmup_seasons)
 
-            season_summary_blocks = []
+            season_summary_items = []
             for season in date_df_display.columns:
                 _, summary = summarize_detection_progression(date_df_display[season])
                 d_blue = format_alert_date(summary.get('blue_date'), fallback="-")
                 d_orange = format_alert_date(summary.get('orange_date'), fallback="-")
                 d_red = format_alert_date(summary.get('red_date'), fallback="-")
-                season_summary_blocks.append(f"""
-                <div style="margin-bottom: 18px;">
-                    <div style="font-size: 18px; font-weight: 800; color: #333; margin-bottom: 10px;">
-                        {int(season)}-{int(season)+1} Season
-                    </div>
-                    <div class="summary-card-container">
-                        <div class="summary-card" style="border-left: 8px solid #1f77b4;">
-                            <div style="font-size: 18px; color: #666; font-weight: 700; margin-bottom: 5px;">Attention</div>
-                            <div style="font-size: 28px; color: #1f77b4; font-weight: 800; letter-spacing: 0.5px;">{d_blue}</div>
-                        </div>
-                        <div class="summary-card" style="border-left: 8px solid #ff7f0e;">
-                            <div style="font-size: 18px; color: #666; font-weight: 700; margin-bottom: 5px;">Alert</div>
-                            <div style="font-size: 28px; color: #ff7f0e; font-weight: 800; letter-spacing: 0.5px;">{d_orange}</div>
-                        </div>
-                        <div class="summary-card" style="border-left: 8px solid #d62728;">
-                            <div style="font-size: 18px; color: #666; font-weight: 700; margin-bottom: 5px;">Severe</div>
-                            <div style="font-size: 28px; color: #d62728; font-weight: 800; letter-spacing: 0.5px;">{d_red}</div>
-                        </div>
-                    </div>
-                </div>
-                """)
+                season_summary_items.append({
+                    'season': int(season),
+                    'summary': summary,
+                    'blue': d_blue,
+                    'orange': d_orange,
+                    'red': d_red,
+                })
 
             st.markdown("---")
             st.header("Analysis Report")
@@ -633,29 +688,58 @@ with tab1:
 
             st.markdown('<span id="season-summary" class="report-anchor"></span>', unsafe_allow_html=True)
             st.subheader("3. Early Warning Timeline Summary by Season")
-            if season_summary_blocks:
-                st.markdown(f"""
+            if season_summary_items:
+                st.markdown("""
                 <style>
-                    .summary-card-container {{
+                    .season-summary-title {
+                        font-size: 28px;
+                        font-weight: 900;
+                        color: #333;
+                        margin: 26px 0 12px 0;
+                    }
+                    .summary-card-container {
                         display: flex;
                         gap: 15px;
-                        margin-bottom: 30px;
-                    }}
-                    .summary-card {{
+                        margin: 14px 0 34px 0;
+                    }
+                    .summary-card {
                         flex: 1;
                         background: white;
                         padding: 25px 20px;
                         border-radius: 12px;
                         box-shadow: 0 4px 15px rgba(0,0,0,0.05);
                         transition: background-color 0.3s ease, transform 0.2s ease;
-                    }}
-                    .summary-card:hover {{
+                    }
+                    .summary-card:hover {
                         background-color: #f1f3f5 !important;
                         transform: translateY(-3px);
-                    }}
+                    }
                 </style>
-                {''.join(season_summary_blocks)}
                 """, unsafe_allow_html=True)
+                for item in season_summary_items:
+                    season = item['season']
+                    st.markdown(
+                        f"<div class='season-summary-title'>{season}-{season + 1} Season</div>",
+                        unsafe_allow_html=True
+                    )
+                    fig_season = build_season_warning_plot(proc_data, season, target_col, item['summary'])
+                    st.plotly_chart(fig_season, use_container_width=True)
+                    st.markdown(f"""
+                    <div class="summary-card-container">
+                        <div class="summary-card" style="border-left: 8px solid #1f77b4;">
+                            <div style="font-size: 18px; color: #666; font-weight: 700; margin-bottom: 5px;">Attention</div>
+                            <div style="font-size: 28px; color: #1f77b4; font-weight: 800; letter-spacing: 0.5px;">{item['blue']}</div>
+                        </div>
+                        <div class="summary-card" style="border-left: 8px solid #ff7f0e;">
+                            <div style="font-size: 18px; color: #666; font-weight: 700; margin-bottom: 5px;">Alert</div>
+                            <div style="font-size: 28px; color: #ff7f0e; font-weight: 800; letter-spacing: 0.5px;">{item['orange']}</div>
+                        </div>
+                        <div class="summary-card" style="border-left: 8px solid #d62728;">
+                            <div style="font-size: 18px; color: #666; font-weight: 700; margin-bottom: 5px;">Severe</div>
+                            <div style="font-size: 28px; color: #d62728; font-weight: 800; letter-spacing: 0.5px;">{item['red']}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.info("No seasonal warning dates were detected by the bootstrap ensemble.")
 
