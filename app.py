@@ -118,6 +118,7 @@ def build_season_warning_plot(data, season, epi, summary):
             range=[0, max_y * 1.18 if pd.notna(max_y) and max_y > 0 else 1],
             showgrid=True,
             gridcolor='rgba(0,0,0,0.12)',
+            fixedrange=True,
         ),
     )
     return fig
