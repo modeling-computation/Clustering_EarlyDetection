@@ -766,11 +766,39 @@ def _build_bootstrap_detection_timeline_shared_axis_experiment(
         range=[0, max(100, max_probability) * 1.05],
         secondary_y=True,
         gridcolor='lightgray',
+        fixedrange=True,
         row=1,
         col=1,
     )
-    fig.update_yaxes(range=[0, max_y * 1.36], showticklabels=False, title_text="", showgrid=False, row=2, col=1, secondary_y=False)
-    fig.update_yaxes(range=[0, 100], showticklabels=False, title_text="", showgrid=False, row=2, col=1, secondary_y=True)
+    fig.update_yaxes(
+        title_text=f"<b>{epi}</b>",
+        range=[0, y_max_limit],
+        secondary_y=False,
+        showgrid=False,
+        fixedrange=True,
+        row=1,
+        col=1,
+    )
+    fig.update_yaxes(
+        range=[0, max_y * 1.36],
+        showticklabels=False,
+        title_text="",
+        showgrid=False,
+        fixedrange=True,
+        row=2,
+        col=1,
+        secondary_y=False,
+    )
+    fig.update_yaxes(
+        range=[0, 100],
+        showticklabels=False,
+        title_text="",
+        showgrid=False,
+        fixedrange=True,
+        row=2,
+        col=1,
+        secondary_y=True,
+    )
     return fig
 
 # Render the retrospective bootstrap result across the full analysis period.
